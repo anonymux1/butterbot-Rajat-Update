@@ -1,140 +1,104 @@
 "use client";
 
-import * as z from "zod";
-import axios from "axios";
-import { MessageSquare } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { useState } from "react";
-import { toast } from "react-hot-toast";
-import { useRouter } from "next/navigation";
-import { ChatCompletionRequestMessage } from "openai";
-
-import { BotAvatar } from "@/components/bot-avatar";
+import { useState, useEffect } from "react";
+import { FullPageChat } from "flowise-embed-react";
 import { Heading } from "@/components/heading";
+import { MessageSquare, Bot, ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
-import { cn } from "@/lib/utils";
-import { Loader } from "@/components/loader";
-import { UserAvatar } from "@/components/user-avatar";
-import { Empty } from "@/components/ui/empty";
-import { useProModal } from "@/hooks/use-pro-modal";
+import Link from 'next/link';
 
-import { formSchema } from "./constants";
+const YourNewPage = () => {
+  const [botName, setBotName] = useState(''); 
 
-const ConversationPage = () => {
-  const router = useRouter();
-  const proModal = useProModal();
-  const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([]);
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const botNameFromUrl = urlParams.get('botName') || '';
+    console.log('botNameFromUrl: ', botNameFromUrl);
+    setBotName(botNameFromUrl);
+  }, []);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      prompt: ""
-    }
-  });
-
-  const isLoading = form.formState.isSubmitting;
-  
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    try {
-      const userMessage: ChatCompletionRequestMessage = { role: "user", content: values.prompt };
-      const newMessages = [...messages, userMessage];
-      
-      const response = await axios.post('/api/conversation', { messages: newMessages });
-      setMessages((current) => [...current, userMessage, response.data]);
-      
-      form.reset();
-    } catch (error: any) {
-      if (error?.response?.status === 403) {
-        proModal.onOpen();
-      } else {
-        toast.error("Something went wrong.");
-      }
-    } finally {
-      router.refresh();
-    }
-  }
-
-  return ( 
+  return (
     <div>
-      <Heading
-        title="Conversation"
-        description="Our most advanced conversation model."
-        icon={MessageSquare}
-        iconColor="text-violet-500"
-        bgColor="bg-violet-500/10"
-      />
       <div className="px-4 lg:px-8">
+        {botName && (
+          <Badge variant="outline" className="mx-auto mb-4">
+            ButterBot Name: {botName}
+          </Badge>
+        )}
+      </div>
+      <div className="px-4 lg:px-8 flex justify-between items-center">
         <div>
-          <Form {...form}>
-            <form 
-              onSubmit={form.handleSubmit(onSubmit)} 
-              className="
-                rounded-lg 
-                border 
-                w-full 
-                p-4 
-                px-3 
-                md:px-6 
-                focus-within:shadow-sm
-                grid
-                grid-cols-12
-                gap-2
-              "
-            >
-              <FormField
-                name="prompt"
-                render={({ field }) => (
-                  <FormItem className="col-span-12 lg:col-span-10">
-                    <FormControl className="m-0 p-0">
-                      <Input
-                        className="border-0 outline-none focus-visible:ring-0 focus-visible:ring-transparent"
-                        disabled={isLoading} 
-                        placeholder="How do I calculate the radius of a circle?" 
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <Button className="col-span-12 lg:col-span-2 w-full" type="submit" disabled={isLoading} size="icon">
-                Generate
-              </Button>
-            </form>
-          </Form>
+          <Heading
+            title="Test Your ButterBot"
+            description="Speak to your personal information assistant"
+            icon={MessageSquare}
+            iconColor="text-emerald-500"
+            bgColor="bg-emerald-500/10"
+          />
         </div>
-        <div className="space-y-4 mt-4">
-          {isLoading && (
-            <div className="p-8 rounded-lg w-full flex items-center justify-center bg-muted">
-              <Loader />
-            </div>
-          )}
-          {messages.length === 0 && !isLoading && (
-            <Empty label="No conversation started." />
-          )}
-          <div className="flex flex-col-reverse gap-y-4">
-            {messages.map((message) => (
-              <div 
-                key={message.content} 
-                className={cn(
-                  "p-8 w-full flex items-start gap-x-8 rounded-lg",
-                  message.role === "user" ? "bg-white border border-black/10" : "bg-muted",
-                )}
-              >
-                {message.role === "user" ? <UserAvatar /> : <BotAvatar />}
-                <p className="text-sm">
-                  {message.content}
-                </p>
+        <div>
+          <Link href={`/customise?botName=${botName}`} passHref>
+            <Button as="a" className="bg-orange-500 px-6 text-white hover:bg-orange-600">
+              <div className="flex items-center">
+                <Bot className="mr-2 h-4 w-4" />
+                Customize your bot
               </div>
-            ))}
-          </div>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       </div>
-    </div>
-   );
-}
- 
-export default ConversationPage;
+      <div className="px-4 lg:px-8 relative">
 
+        <FullPageChat
+          chatflowid="1e32e22f-c9e9-46f2-a7cd-435b3580183f"
+          apiHost="https://gnoo.onrender.com"
+          theme={{
+            chatWindow: {
+              height: 500,
+              welcomeMessage: "Welcome to Butterbot! As part of this demo, we may only use part of your data. However, rest assured, you'll get a comprehensive sense of Butterbot's capabilities. Let's get started, how can I assist you today!",
+              backgroundColor: "#ffffff",
+              fontSize: 14,
+              poweredByTextColor: "#ffffff",
+              botMessage: {
+                backgroundColor: "#f7f8ff",
+                textColor: "#303235",
+                showAvatar: true,
+                avatarSrc: "https://cdn.shopify.com/s/files/1/0793/8418/3092/files/bblogo.png?v=1690918654",
+              },
+              userMessage: {
+                backgroundColor: "#3a80f6",
+                textColor: "#ffffff",
+                showAvatar: true,
+                avatarSrc: "https://raw.githubusercontent.com/zahidkhawaja/langchain-chat-nextjs/main/public/usericon.png",
+              },
+              textInput: {
+                placeholder: "test out ButterBot...",
+                backgroundColor: "#ffffff",
+                textColor: "#303235",
+                sendButtonColor: "#d9c4ff",
+              }
+            }
+          }}
+          chatflowConfig={{
+            pineconeNamespace: botName,
+          }}
+        />
+        <div style={{
+    position: 'absolute', 
+    bottom: '0', 
+    left: '0', 
+    right: '0', 
+    height: '10%', 
+    zIndex: 9999,
+    backgroundColor: 'transparent',
+  }}></div>
+</div>
+      </div>
+      
+    
+  );
+};
+
+export default YourNewPage;

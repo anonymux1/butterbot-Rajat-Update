@@ -1,33 +1,3 @@
-"use client";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const testimonials = [
-  {
-    name: "Aditya Dutta",
-    avatar: "J",
-    title: "Founder, Moqono",
-    description: "My customers absolutely love this interactive way of shopping.",
-  },
-  {
-    name: "Dhruv Bhushan",
-    avatar: "A",
-    title: "Founder, Habbit Health",
-    description: "Love it. Customer support queries handled by a human are down by 92%.",
-  },
-  {
-    name: "Mohnish Kumar",
-    avatar: "M",
-    title: "Founder, Butterbot",
-    description: "Mujhse kyun pooch rahe ho bhai?!",
-  },
-  {
-    name: "Rajat Hooda",
-    avatar: "M",
-    title: "Founder, Butterbot",
-    description: "Give your business the AI advantage today!",
-  },
-];
 
 export const LandingContent = () => {
   return (

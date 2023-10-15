@@ -13,17 +13,40 @@ const font = Montserrat({ weight: '600', subsets: ['latin'] });
 export const LandingNavbar = () => {
   const { isSignedIn } = useAuth();
 
+  const smoothScroll = (targetId) => {
+    document.querySelector(targetId).scrollIntoView({ 
+      behavior: 'smooth' 
+    });
+  }
+
+
+
   return (
     <nav className="p-4 bg-transparent flex items-center justify-between">
-      <Link href="/" className="flex items-center">
-        <div className="relative h-8 w-8 mr-4">
-          <Image fill alt="Logo" src="/logo2.png" />
+      <Link href="/">
+        <div className="flex items-center cursor-pointer">
+          <div className="relative h-8 w-8 mr-4">
+            <Image fill alt="Logo" src="/bblogo.png" />
+          </div>
+          <h1 className={cn("text-2xl font-bold text-white", font.className)}>
+            ButterBot
+          </h1>
         </div>
-        <h1 className={cn("text-2xl font-bold text-white", font.className)}>
-          ButterBot
-        </h1>
       </Link>
-      <div className="flex items-center gap-x-2">
+      <div className="flex items-center gap-x-8">
+        <span 
+          onClick={() => smoothScroll('#features')}
+          className="text-white cursor-pointer px-6 py-1 border-2 border-transparent hover:border-green-600 hover:rounded-full transition-all duration-100"
+        >
+          Features
+        </span>
+        <span 
+          onClick={() => smoothScroll('#pricing')}
+          className="text-white cursor-pointer px-6 py-1 border-2 border-transparent hover:border-purple-600 hover:rounded-full transition-all duration-100 mr-5"
+        >
+          Pricing
+        </span>
+
         <Link href={isSignedIn ? "/dashboard" : "/sign-up"}>
           <Button variant="outline" className="rounded-full">
             Get Started
@@ -31,5 +54,5 @@ export const LandingNavbar = () => {
         </Link>
       </div>
     </nav>
-  )
+  );
 }

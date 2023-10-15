@@ -9,9 +9,11 @@ import { Loader } from "@/components/loader";
 import { Label } from "@/components/ui/label";
 import { Heading } from "@/components/heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, CheckCheck, Bot, ChevronRight, UploadCloud } from "lucide-react"
+import { Check, CheckCheck, Bot, ChevronRight, UploadCloud, MessageSquare } from "lucide-react"
 import axios from "axios";
 import { useUser } from "@clerk/nextjs"; // import auth from Clerk
+import { toast } from "react-hot-toast";
+
 
 
 const BotCreationPage = () => {
@@ -20,7 +22,7 @@ const BotCreationPage = () => {
   const [botNameError, setBotNameError] = useState("");
   const [url, setUrl] = useState("");
   const [urlError, setUrlError] = useState("");
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [bots, setBots] = useState([]);
   const [submittedBotName, setSubmittedBotName] = useState("");
   const [formSubmitted, setFormSubmitted] = useState(false);  // new state variable
@@ -30,26 +32,45 @@ const BotCreationPage = () => {
   const PDF_API_URL = "https://butterbot-ml2y.onrender.com/api/v1/prediction/88e6f717-db04-40bc-a3d5-753a7582b37d";
 
 
-  function isValidURL(string) {
-    var res = string.match(/(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/);
-    return (res !== null);
+  function isValidURLs(string: string) {
+    const nospace = string.replace(/\s/g,'');
+    const urlArray = nospace.split(',');
+    var index = 0;
+    var validURLs = true;
+    var res = null;
+    while (index < urlArray.length)
+    {
+      console.log(urlArray[index]);
+      res = urlArray[index].match(/(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/);
+      index++;
+      if (res === null) {
+      validURLs = false;
+      break;
+      }
+      index++;
+    }
+    return (validURLs);
   };
 
   const handleFileChange = (event) => {
-    setFile(event.target.files[0]);
+    const selectedFiles = event.target.files; // Get the selected files from the input element
+    const newFiles = Array.from(selectedFiles); // Convert the FileList to an array
+  
+    // Update the files state array by concatenating the new files
+    setFiles((prevFiles) => [...prevFiles, ...newFiles] as File[]);
   };
 
-  const handleBotNameChange = (event) => {
+  const handleBotNameChange = (event: { target: { value: React.SetStateAction<string>; }; }) => {
     setBotName(event.target.value);
     setBotNameError('');  
   };
 
-  const handleUrlChange = (event) => {
+  const handleUrlChange = (event: { target: { value: React.SetStateAction<string>; }; }) => {
     setUrl(event.target.value);
     setUrlError('');
   };
 
-  const onSubmit = async (event) => {
+  const onSubmit = async (event: { preventDefault: () => void; }) => {
     event.preventDefault();
     const userId = user.id;
     setFormSubmitted(false);
@@ -60,62 +81,128 @@ const BotCreationPage = () => {
       return;
     }
 
-    if (url === '' && file === null) {
+    if (url === '' && files === null) {
       setUrlError("Either a URL or a file is required");
       return;
     }
 
     // URL validation
-    if (url !== '' && !isValidURL(url)) {
+    if (url !== '' && !isValidURLs(url)) {
       setUrlError("Invalid URL");
       return;
     }
 
-    if (botName !== '' && (url !== '' || file !== null)) {
+    if (botName !== '' && (url !== '' || files !== null)) {
       setLoading(true);
-      const payload = {
-        "question": "Hey, how are you?",
-        "overrideConfig": {
-          "url": url,
-          "pineconeNamespace": botName,
-          "pineconeIndex": "keeko",
-          "pineconeEnv": "northamerica-northeast1-gcp",
-          "webScrap": true,
-        },
-      };
-
+      var success = true;
       try {
-        let res;
         if (url !== '') {
-          res = await axios.post(SCRAPING_API_URL, payload);
-        } else if (file !== null) {
+          const nospace = url.replace(/\s/g,'');
+          const urlArray = nospace.split(',');
+          var index = 0;
+          while (index<urlArray.length)
+          {
+          const payload = {
+            "question": "Hey, how are you?",
+            "overrideConfig": {
+              "url": urlArray[index],
+              "pineconeNamespace": botName,
+              "pineconeIndex": "keeko",
+              "pineconeEnv": "northamerica-northeast1-gcp",
+              "webScrap": true,
+            },
+          };
+        let res = await axios.post(SCRAPING_API_URL, payload);
+        if (res.status !== 200)
+         {
+          success = false;
+          break;
+         }
+         index++;
+        }
+        }
+        let fileres;
+        if (files !== null && files.length > 0) {
+          let idx =0;
+          while (idx < files.length) {
           const formData = new FormData();
-          formData.append("files", file);
+          formData.append("files", files[idx]);
           formData.append("pineconeNamespace", botName);  // Use the bot name from the form data
-          res = await axios.post(PDF_API_URL, formData, {
+          fileres = await axios.post(PDF_API_URL, formData, {
             headers: {
               "Content-Type": "multipart/form-data",
             },
           });
+          if (fileres.status !== 200) {
+          success = false;
+          break;
+          }
+          idx++;
         }
-
-        if (res.status === 200) {
-          setBots(prevBots => [...prevBots, { botName: botName, url: url, file: file }]);
+      }
+        if (success === true) {
+          const newFiles = Array.from(files);
+          setBots(prevBots => [...prevBots, { botName: botName, url: url, filenames: files.map((file) => file.name).join(' '), file:files}]);
           setLoading(false);
           setBotName(botName);
           setUrl("");
-         setFile(null);
-         setFormSubmitted(true); 
-        } else {
-          setLoading(false);
-          console.error(`An error occurred while processing the input. Status code: ${res.status}`);
+          setFiles([]);
+          setFormSubmitted(true); 
+          // New: Now that the bot is created, save it to the database
+          try {
+            const botRes = await fetch('/api/chatbot', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+
+              body: JSON.stringify({
+                botName,
+                url,
+                file: files ? files.map((file) => file.name).join(' ') : '',  // Store the file name in the database
+                userId,
+              }),
+            });
+  
+            // If the bot was saved successfully, show a success message
+            if (botRes.ok) {
+              toast.success("Bot saved successfully!");
+            } else {
+              // If there was an error, show an error message
+              const errorMessage = await botRes.text();
+              toast.error(`Failed to save bot: ${errorMessage}`);
+            }
+          } catch (error) {
+            console.error('Failed to save bot:', error);
+            toast.error('Failed to save bot');
+          } 
+  
+          } else {
+            setLoading(false);
+            console.error(`An error occurred while processing the input. Status code: ${res.status}`);
+          }
+        } catch (error) {
+          console.error(error);
+          
+          // Check if the error message contains the specific error string
+          if (error.response && error.response.data.includes("Vector dimension 0 does not match the dimension of the index 1536")) {
+              setBots(prevBots => [...prevBots, { botName: botName, url: url, files: files }]);
+              setBotName(botName);
+              setUrl("");
+              setFile(null);
+              setFormSubmitted(true);
+  
+  
+          } else {
+            // For any other error, display a toast
+            toast.error("Invalid URL details. Please check your submission again.");
         }
-      } catch (error) {
-        setLoading(false);
-        console.error(error);
+      } finally {
+          setLoading(false);
       }
-    }
-  };
+      }
+    };
+  
 
   return (
     <div className="px-4 lg:px-8 space-y-4">
@@ -147,21 +234,22 @@ const BotCreationPage = () => {
 
         </div>
         <div className="space-y-2">
-          <Label htmlFor="url" className="font-bold">Enter Website Address</Label>
+          <Label htmlFor="url" className="font-bold">Enter Website / Webpage Addresses</Label>
           <Input 
             id="url"
             type="text" 
             onChange={handleUrlChange} 
-            placeholder="Enter website URL : https://"
+            placeholder="Enter website URLs separated by commas : https://"
             className="w-full"
           />
           {urlError && <p className="text-xs font-bold text-red-500">{urlError}</p>}
         </div>
         <div className="space-y-2">
-          <Label htmlFor="pdfFile" className="font-bold">Upload PDF file</Label>
+          <Label htmlFor="pdfFile" className="font-bold">Upload PDF files</Label>
           <Input 
             id="pdfFile"
             type="file"
+            multiple
             onChange={handleFileChange}
             accept=".pdf"
             className="w-full"
@@ -201,8 +289,8 @@ const BotCreationPage = () => {
               <p className="text-gray-600 text-sm">{bot.url}</p>
             </div>
             <div className="p-4 bg-white shadow-md">
-              <p className="text-blue-700 font-semibold text-md">PDF analysed:</p>
-              <p className="text-gray-600 text-sm">{bot.file ? bot.file.name : "No file uploaded"}</p>
+              <p className="text-blue-700 font-semibold text-md">Files analysed:</p>
+              <p className="text-gray-600 text-xs">{bot.filenames ? bot.filenames : "No file uploaded"}</p>
             </div>
           </CardContent>
         </Card>
@@ -212,4 +300,3 @@ const BotCreationPage = () => {
   };
   
   export default BotCreationPage;
-  
