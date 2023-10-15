@@ -114,14 +114,24 @@ export default function HomePage() {
       console.error("Failed to delete bot:", error);
     }
   };
-  const isValidURL = (string) => {
-    if (typeof string !== "string") {
-      return false;
+  const isValidURL = (string) =>   {
+    const nospace = string.replace(/\s/g,'');
+    const urlArray = nospace.split(',');
+    var index = 0;
+    var validURLs = true;
+    var res = null;
+    while (index < urlArray.length)
+    {
+      console.log(urlArray[index]);
+      res = urlArray[index].match(/(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/);
+      index++;
+      if (res === null) {
+      validURLs = false;
+      break;
+      }
+      index++;
     }
-    var res = string.match(
-      /(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/,
-    );
-    return res !== null;
+    return (validURLs);
   };
 
   const handleNewDataChange = (event) => {
