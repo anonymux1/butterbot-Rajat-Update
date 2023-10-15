@@ -9,9 +9,11 @@ import { Loader } from "@/components/loader";
 import { Label } from "@/components/ui/label";
 import { Heading } from "@/components/heading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, CheckCheck, Bot, ChevronRight, UploadCloud } from "lucide-react"
+import { Check, CheckCheck, Bot, ChevronRight, UploadCloud, MessageSquare } from "lucide-react"
 import axios from "axios";
 import { useUser } from "@clerk/nextjs"; // import auth from Clerk
+import { toast } from "react-hot-toast";
+
 
 
 const BotCreationPage = () => {
@@ -146,16 +148,61 @@ const BotCreationPage = () => {
           setUrl("");
           setFiles([]);
           setFormSubmitted(true); 
-        } else {
-          setLoading(false);
-          console.error(`An error occurred while processing the input. Status code`);
+          // New: Now that the bot is created, save it to the database
+          try {
+            const botRes = await fetch('/api/chatbot', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+
+              body: JSON.stringify({
+                botName,
+                url,
+                file: files ? files.map((file) => file.name).join(' ') : '',  // Store the file name in the database
+                userId,
+              }),
+            });
+  
+            // If the bot was saved successfully, show a success message
+            if (botRes.ok) {
+              toast.success("Bot saved successfully!");
+            } else {
+              // If there was an error, show an error message
+              const errorMessage = await botRes.text();
+              toast.error(`Failed to save bot: ${errorMessage}`);
+            }
+          } catch (error) {
+            console.error('Failed to save bot:', error);
+            toast.error('Failed to save bot');
+          } 
+  
+          } else {
+            setLoading(false);
+            console.error(`An error occurred while processing the input. Status code: ${res.status}`);
+          }
+        } catch (error) {
+          console.error(error);
+          
+          // Check if the error message contains the specific error string
+          if (error.response && error.response.data.includes("Vector dimension 0 does not match the dimension of the index 1536")) {
+              setBots(prevBots => [...prevBots, { botName: botName, url: url, files: files }]);
+              setBotName(botName);
+              setUrl("");
+              setFile(null);
+              setFormSubmitted(true);
+  
+  
+          } else {
+            // For any other error, display a toast
+            toast.error("Invalid URL details. Please check your submission again.");
         }
-      } catch (error) {
-        setLoading(false);
-        console.error(error);
+      } finally {
+          setLoading(false);
       }
-    }
-  };
+      }
+    };
+  
 
   return (
     <div className="px-4 lg:px-8 space-y-4">
